@@ -87,7 +87,7 @@ class SlicerLeapModuleLogic(object):
     import Leap
     self.LeapController = Leap.Controller()
     self.enableAutoCreateTransforms = False    
-    self.onFrame()
+    self.onFrame()  #启动onFrame函数循环，每1s钟10次
       
   def setEnableAutoCreateTransforms(self, enable):
     self.enableAutoCreateTransforms = enable
