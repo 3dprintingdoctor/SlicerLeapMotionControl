@@ -94,13 +94,13 @@ class SlicerLeapModuleLogic(object):
 
   def setTransform(self, handIndex, fingerIndex, fingerTipPosition):
     
-    transformName = "Hand%iFinger%i" % (handIndex+1,fingerIndex+1) # +1 because to have 1-based indexes for the hands and fingers
-    print(transformName)
+    transformName = "Hand%iFinger%i" % (handIndex+1,fingerIndex+1) #设定手ID和指头ID
+    print('transform:',transformName)
     transform = slicer.util.getNode(transformName)
 
     # Create the transform if does not exist yet
     if not transform :
-      if self.enableAutoCreateTransforms :
+      if self.enableAutoCreateTransforms :   #如果复选判断框打开则在次场景中新建一个tranform
         # Create the missing transform
         transform = slicer.vtkMRMLLinearTransformNode()
         transform.SetName(transformName)
@@ -108,20 +108,22 @@ class SlicerLeapModuleLogic(object):
       else :
         # No transform exist, so just ignore the finger
         return
-    
+    #通过VTK创建一个transform
     newTransform = vtk.vtkTransform()
-    # Reorder and reorient to match the LeapMotion's coordinate system with RAS coordinate system
+    # 赋值transform,这里只是赋值给了tranform平移的信息，如果加入旋转的信息也可以在这里，或者缩放的信息
     newTransform.Translate(-fingerTipPosition[0], fingerTipPosition[2], fingerTipPosition[1])
+    print('fingerTipPositiion:',fingerTipPosition)  #fingerTipPosition应该是一个坐标，但是也许是一个LPS坐标，所以这里需要转换为RAS坐标
     transform.SetMatrixTransformToParent(newTransform.GetMatrix())
   
   def onFrame(self):
     # Get the most recent frame
-    frame = self.LeapController.frame()
-
+    frame = self.LeapController.frame()  #读取LEAP的frame数据
+    #迭代每一次的手指的坐标，并且把这个坐标发送给transform
     for handIndex, hand in enumerate(frame.hands) :
       for fingerIndex, finger in enumerate(hand.fingers) :
         self.setTransform(handIndex, fingerIndex, finger.tip_position)
     
     # Theoretically Leap could periodically call a callback function, but due to some reason it does not
     # appear to work, so just poll with a timer instead.
+    #通过timer运行单次的迭代,每秒钟迭代10次
     qt.QTimer.singleShot(100, self.onFrame)
