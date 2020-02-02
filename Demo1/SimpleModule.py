@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*
 from __future__ import print_function
 import os
 from __main__ import vtk, qt, ctk, slicer
@@ -53,11 +54,16 @@ class SlicerLeapModuleWidget(object):
     # The function is useful for testing and initial creation of the transforms but not recommended when the
     # transforms are already in the scene.
     #
-    self.enableAutoCreateTransformsCheckBox = qt.QCheckBox()
-    self.enableAutoCreateTransformsCheckBox.checked = 0
-    self.enableAutoCreateTransformsCheckBox.setToolTip("If checked, then transforms are created automatically (not recommended when transforms exist in the scene already).")
-    parametersFormLayout.addRow("Auto-create transforms", self.enableAutoCreateTransformsCheckBox)
-    self.enableAutoCreateTransformsCheckBox.connect('stateChanged(int)', self.setEnableAutoCreateTransforms)
+	
+	#链接按钮
+    self.start = qt.QPushButton("START-A")
+    self.start.toolTip = "start"
+    self.start.checkable = True
+    parametersFormLayout.addRow(self.start)
+	
+	
+    
+    self.start.connect('clicked(bool)', self.starting)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -65,9 +71,16 @@ class SlicerLeapModuleWidget(object):
   def cleanup(self):
     pass
   #通过复选框的按钮来执行相关的代码函数，设定自动新建transform函数打开，避免一些错误发生（寻找不到id）
-  def setEnableAutoCreateTransforms(self, enable):
-    logic = SlicerLeapModuleLogic()
-    logic.setEnableAutoCreateTransforms(enable)
+  
+  def starting(self):
+    if self.start.checked:
+      self.lock=1
+      logic = SlicerLeapModuleLogic()
+      logic.onFrame()
+	    self.start.text = "starting"
+	  else：
+      self.lock=0
+		  self.startB.text = 'disConnect'
   
  
 
@@ -86,8 +99,8 @@ class SlicerLeapModuleLogic(object):
   def __init__(self):
     import Leap
     self.LeapController = Leap.Controller()
-    self.enableAutoCreateTransforms = False    
-    self.onFrame()  #启动onFrame函数循环，每1s钟10次
+      
+    
       
   def setEnableAutoCreateTransforms(self, enable):
     self.enableAutoCreateTransforms = enable
@@ -116,14 +129,23 @@ class SlicerLeapModuleLogic(object):
     transform.SetMatrixTransformToParent(newTransform.GetMatrix())
   
   def onFrame(self):
-    # Get the most recent frame
-    frame = self.LeapController.frame()  #读取LEAP的frame数据
-    #迭代每一次的手指的坐标，并且把这个坐标发送给transform
-    for handIndex, hand in enumerate(frame.hands) :
-      for fingerIndex, finger in enumerate(hand.fingers) :
-        self.setTransform(handIndex, fingerIndex, finger.tip_position)
-    
-    # Theoretically Leap could periodically call a callback function, but due to some reason it does not
-    # appear to work, so just poll with a timer instead.
-    #通过timer运行单次的迭代,每秒钟迭代10次
-    qt.QTimer.singleShot(100, self.onFrame)
+    if self.lock:
+      # Get the most recent frame
+      frame = self.LeapController.frame()  #读取LEAP的frame数据
+      print(frame.hands)
+      #迭代每一次的手指的坐标，并且把这个坐标发送给transform
+      for handIndex, hand in enumerate(frame.hands) :
+        for fingerIndex, finger in enumerate(hand.fingers) :
+          self.setTransform(handIndex, fingerIndex, finger.tip_position)
+
+      #查看手的夹角
+      pitch = frame.hands.hand.direction.pitch
+      print('pitch:',pitch)
+      #yaw = hand.direction.yaw
+      #roll = hand.palm_normal.roll
+      # Theoretically Leap could periodically call a callback function, but due to some reason it does not
+      # appear to work, so just poll with a timer instead.
+      #通过timer运行单次的迭代,每秒钟迭代10次
+      qt.QTimer.singleShot(100, self.onFrame)
+    else:
+      print('closed')
